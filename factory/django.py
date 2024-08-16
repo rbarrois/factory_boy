@@ -8,6 +8,7 @@ import functools
 import io
 import logging
 import os
+import random
 import warnings
 from typing import Dict, TypeVar
 
@@ -258,11 +259,13 @@ class ImageField(FileField):
     def _make_data(self, params):
         # ImageField (both django's and factory_boy's) require PIL.
         # Try to import it along one of its known installation paths.
-        from PIL import Image
+        from PIL import Image, ImageColor
 
         width = params.get('width', 100)
         height = params.get('height', width)
-        color = params.get('color', 'blue')
+        color = params.get('color', random.choice(  # noqa: S311
+            list(ImageColor.colormap.keys()),
+        ))
         image_format = params.get('format', 'JPEG')
         image_palette = params.get('palette', 'RGB')
 

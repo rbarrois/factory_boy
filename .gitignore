@@ -3,6 +3,7 @@
 *.pyc
 *.pyo
 .idea/
+.venv/
 
 # Build-related files
 docs/_build/
