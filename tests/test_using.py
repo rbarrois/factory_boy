@@ -78,6 +78,13 @@ class FakeModel:
             instance._defaults = None
             return instance
 
+        def bulk_create(self, instances):
+            for instance in instances:
+                instance.id = 2
+                instance._defaults = None
+
+            return instances
+
         def values_list(self, *args, **kwargs):
             return self
 
