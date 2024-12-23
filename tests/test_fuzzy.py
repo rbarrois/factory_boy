@@ -193,6 +193,94 @@ class FuzzyDecimalTestCase(unittest.TestCase):
         finally:
             decimal_context.traps[decimal.FloatOperation] = old_traps
 
+    def test_decimal_args(self):
+        low = decimal.Decimal('5.5')
+        high = decimal.Decimal('10')
+        fuzz = fuzzy.FuzzyDecimal(low, high)
+
+        with self.assertRaises(TypeError):
+            utils.evaluate_declaration(fuzz)
+
+
+class FuzzyDecimalDecTestCase(unittest.TestCase):
+    def test_definition(self):
+        """Tests all ways of defining a FuzzyDecimal."""
+        fuzz = fuzzy.FuzzyDecimalDec('2.0', decimal.Decimal('3.0'))
+        for _i in range(20):
+            res = utils.evaluate_declaration(fuzz)
+            self.assertTrue(
+                decimal.Decimal('2.0') <= res <= decimal.Decimal('3.0'),
+                "value %d is not between 2.0 and 3.0" % res,
+            )
+
+        fuzz = fuzzy.FuzzyDecimalDec(4.0)
+        for _i in range(20):
+            res = utils.evaluate_declaration(fuzz)
+            self.assertTrue(
+                decimal.Decimal('0.0') <= res <= decimal.Decimal('4.0'),
+                "value %d is not between 0.0 and 4.0" % res,
+            )
+
+        fuzz = fuzzy.FuzzyDecimalDec(1.0, '4.0', precision=5)
+        for _i in range(20):
+            res = utils.evaluate_declaration(fuzz)
+            self.assertTrue(
+                decimal.Decimal('1.0') <= res <= decimal.Decimal('4.0'),
+                "value %d is not between 1.0 and 4.0" % res,
+            )
+            self.assertTrue(res.as_tuple().exponent, -5)
+
+    def test_biased(self):
+        fake_uniform = lambda low, high: low + high
+
+        fuzz = fuzzy.FuzzyDecimalDec(decimal.Decimal('2.0'), decimal.Decimal('8.0'))
+
+        with mock.patch('factory.random.uniform_decimal', fake_uniform):
+            res = utils.evaluate_declaration(fuzz)
+
+        self.assertEqual(decimal.Decimal('10.0'), res)
+        fuzz = fuzzy.FuzzyDecimalDec('2.0', '8.0')
+
+        with mock.patch('factory.random.uniform_decimal', fake_uniform):
+            res = utils.evaluate_declaration(fuzz)
+
+        self.assertEqual(decimal.Decimal('10.0'), res)
+
+        fuzz = fuzzy.FuzzyDecimalDec(3.33, 20 / 3, precision=2)
+
+        with mock.patch('factory.random.uniform_decimal', fake_uniform):
+            res = utils.evaluate_declaration(fuzz)
+
+        self.assertEqual(decimal.Decimal('10.00'), res)
+
+    def test_biased_high_only(self):
+        fake_uniform = lambda low, high: low + high
+
+        fuzz = fuzzy.FuzzyDecimalDec('8.0')
+
+        with mock.patch('factory.random.uniform_decimal', fake_uniform):
+            res = utils.evaluate_declaration(fuzz)
+
+        self.assertEqual(decimal.Decimal('8.0'), res)
+
+    def test_precision(self):
+        fake_uniform = lambda low, high: low + high + decimal.Decimal('0.001')
+
+        fuzz = fuzzy.FuzzyDecimalDec('8.0', precision=3)
+
+        with mock.patch('factory.random.uniform_decimal', fake_uniform):
+            res = utils.evaluate_declaration(fuzz)
+
+        self.assertEqual(decimal.Decimal('8.001').quantize(decimal.Decimal(10) ** -3), res)
+
+    def test_decimal_args(self):
+        low = decimal.Decimal('5.5')
+        high = decimal.Decimal('10')
+        fuzz = fuzzy.FuzzyDecimalDec(low, high)
+
+        res = utils.evaluate_declaration(fuzz)
+        self.assertTrue(low <= res <= high, "value %d is not between 5.5 and 10" % res)
+
 
 class FuzzyFloatTestCase(unittest.TestCase):
     def test_definition(self):

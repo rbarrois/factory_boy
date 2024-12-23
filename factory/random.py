@@ -1,3 +1,4 @@
+import decimal
 import random
 
 import faker.generator
@@ -28,3 +29,8 @@ def reseed_random(seed):
     r = random.Random(seed)
     random_internal_state = r.getstate()
     set_random_state(random_internal_state)
+
+
+def uniform_decimal(low, high):
+    modifier = decimal.Decimal(randgen.random())
+    return low + (high - low) * modifier

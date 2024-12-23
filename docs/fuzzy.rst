@@ -122,32 +122,79 @@ FuzzyDecimal
     The :class:`FuzzyDecimal` fuzzer generates random :class:`decimals <decimal.Decimal>` within a given
     inclusive range.
 
+    .. note::
+        Providing decimals as argument will result in a :exc:`TypeError`. Use :class:`~factory.fuzzy.FuzzyDecimalDec`
+        instead.
+
     The :attr:`low` bound may be omitted, in which case it defaults to 0:
 
     .. code-block:: pycon
 
-        >>> FuzzyDecimal(0.5, 42.7)
-        >>> fi.low, fi.high
+        >>> fd = FuzzyDecimal(0.5, 42.7)
+        >>> fd.low, fd.high
         0.5, 42.7
 
-        >>> fi = FuzzyDecimal(42.7)
-        >>> fi.low, fi.high
+        >>> fd = FuzzyDecimal(42.7)
+        >>> fd.low, fd.high
         0.0, 42.7
 
-        >>> fi = FuzzyDecimal(0.5, 42.7, 3)
-        >>> fi.low, fi.high, fi.precision
+        >>> fd = FuzzyDecimal(0.5, 42.7, 3)
+        >>> fd.low, fd.high, fd.precision
         0.5, 42.7, 3
 
     .. attribute:: low
 
-        decimal, the inclusive lower bound of generated decimals
+        float or int, the inclusive lower bound of generated decimals
 
     .. attribute:: high
 
-        decimal, the inclusive higher bound of generated decimals
+        float or int, the inclusive higher bound of generated decimals
 
     .. attribute:: precision
-        int, the number of digits to generate after the dot. The default is 2 digits.
+
+        int, the number of digits after the decimal separator. The default is 2.
+
+
+FuzzyDecimalDec
+---------------
+
+.. class:: FuzzyDecimalDec(low[, high[, precision=2]])
+
+    The :class:`FuzzyDecimalDec` fuzzer generates random :class:`decimals <decimal.Decimal>` within a given
+    inclusive range, accepting any argument that the constructor of the :class:`decimal <decimal.Decimal>`
+    accepts.
+
+    .. note::
+        One purpose of this class is accuracy. Providing inaccurate arguments (:class:`floats <float>`), will result in
+        inaccurate bounds. In that case it's better to use :class:`~factory.fuzzy.FuzzyDecimal` instead.
+
+    The :attr:`low` bound may be omitted, in which case it defaults to 0:
+
+    .. code-block:: pycon
+
+        >>> fd = FuzzyDecimalDec('0.5', Decimal('42.7'))
+        >>> fd.low, fd.high
+        Decimal('0.5'), Decimal('42.7')
+
+        >>> fd = FuzzyDecimalDec(42.7)
+        >>> fd.low, fd.high
+        Decimal('0'), Decimal('42.7000000000000028421709430404007434844970703125')
+
+        >>> fd = FuzzyDecimalDec('0.5', '42.7', 3)
+        >>> fd.low, fd.high, fd.precision
+        Decimal('0.5'), Decimal('42.7'), 3
+
+    .. attribute:: low
+
+        string, Decimal or int, the inclusive lower bound of generated decimals
+
+    .. attribute:: high
+
+        string, Decimal or int, the inclusive higher bound of generated decimals
+
+    .. attribute:: precision
+
+        int, the number of digits after the decimal separator. The default is 2.
 
 
 FuzzyFloat
