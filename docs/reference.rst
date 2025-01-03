@@ -1672,6 +1672,11 @@ When calling the factory, some arguments will be extracted for this method:
 - If a ``post`` argument is passed, it will be passed as the ``extracted`` field
 - Any argument starting with ``post__XYZ`` will be extracted, its ``post__`` prefix
   removed, and added to the kwargs passed to the post-generation hook.
+- By default kwargs are "unrolled" before running the post-generation hook.
+  This means that any lazily-evaluated constructs (e.g. a :class:`LazyFunction`)
+  will be evaluated before post-generation.
+  Unrolling can be disabled with the ``unroll_context`` decorator argument:
+  ``@post_generation(unroll_context=False)``
 
 Extracted arguments won't be passed to the :attr:`~FactoryOptions.model` class.
 

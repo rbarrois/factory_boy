@@ -1249,6 +1249,52 @@ class MaybeTestCase(unittest.TestCase):
         self.assertEqual(5 ** 2 - 1, obj_squared.value)
         self.assertEqual(6 ** 2 * 5 * 2, obj_combined.value)
 
+    def test_post_generation_unroll_context(self):
+        class DummyFactory(factory.Factory):
+            class Meta:
+                model = Dummy
+
+            value = 0
+            generated = []
+
+            @factory.post_generation()
+            @staticmethod
+            def pg1(obj, create, extracted, **kwargs):
+                """Post-generation with context unrolling enabled."""
+                if extracted is None:
+                    return
+                obj.generated = DummyFactory.build_batch(extracted, value=kwargs['v'])
+
+            @factory.post_generation(unroll_context=False)
+            @staticmethod
+            def pg2(obj, create, extracted, **kwargs):
+                """Post-generation with context unrolling disabled."""
+                if extracted is None:
+                    return
+                obj.generated = DummyFactory.build_batch(extracted, value=kwargs['v'])
+
+        obj = DummyFactory.build(value=4)
+        self.assertEqual(4, obj.value)
+        self.assertEqual([], obj.generated)
+
+        obj = DummyFactory.build(value=100, pg1=3, pg1__v=10)
+        self.assertEqual(100, obj.value)
+        self.assertEqual(3, len(obj.generated))
+        self.assertEqual([10, 10, 10], [g.value for g in obj.generated])
+        self.assertTrue(all(g.generated == [] for g in obj.generated))
+
+        obj = DummyFactory.build(value=100, pg1=2, pg1__v=factory.Iterator([78, 79, 80]))
+        self.assertEqual(100, obj.value)
+        self.assertEqual(2, len(obj.generated))
+        self.assertEqual([78, 78], [g.value for g in obj.generated])
+        self.assertTrue(all(g.generated == [] for g in obj.generated))
+
+        obj = DummyFactory.build(value=100, pg2=3, pg2__v=factory.Iterator([78, 79, 80]))
+        self.assertEqual(100, obj.value)
+        self.assertEqual(3, len(obj.generated))
+        self.assertEqual([78, 79, 80], [g.value for g in obj.generated])
+        self.assertTrue(all(g.generated == [] for g in obj.generated))
+
 
 class TraitTestCase(unittest.TestCase):
     def test_traits(self):

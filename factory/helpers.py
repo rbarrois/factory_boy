@@ -113,5 +113,17 @@ def container_attribute(func):
     return declarations.ContainerAttribute(func, strict=False)
 
 
-def post_generation(fun):
-    return declarations.PostGeneration(fun)
+def post_generation(fun=None, unroll_context=True):
+    """Post-generation decorator that allows turning context unrolling on/off.
+
+    Turning off context unrolling is useful e.g. for passing a LazyFunction as
+    a post-generation keyword argument.
+    """
+    class PostGeneration(declarations.PostGeneration):
+        UNROLL_CONTEXT_BEFORE_EVALUATION = unroll_context
+
+    def post_generation_(fun):
+        return PostGeneration(fun)
+
+    # Note: fun will be None when the decorator is used with parentheses.
+    return post_generation_(fun) if fun is not None else post_generation_
