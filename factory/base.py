@@ -2,6 +2,7 @@
 
 
 import collections
+import inspect
 import logging
 import warnings
 from typing import Generic, List, Type, TypeVar
@@ -243,6 +244,7 @@ class FactoryOptions:
         if (self.model is not None
                 and self.base_factory is not None
                 and self.base_factory._meta.model is not None
+                and inspect.isclass(self.model)
                 and issubclass(self.model, self.base_factory._meta.model)):
             return self.base_factory._meta.counter_reference
         else:

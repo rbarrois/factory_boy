@@ -43,6 +43,7 @@ ChangeLog
 
 - :issue:`1031`: Do not require :attr:`~factory.alchemy.SQLAlchemyOptions.sqlalchemy_session` when
   :attr:`~factory.alchemy.SQLAlchemyOptions.sqlalchemy_session_factory` is provided.
+- :issue:`1072`: Allow using functions as models for a :attr:`~factory.FactoryOptions.model`.
 
 *Removed:*
 

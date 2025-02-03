@@ -281,6 +281,22 @@ class FactoryTestCase(unittest.TestCase):
         ones = {x.one for x in (parent, alt_parent, sub, alt_sub)}
         self.assertEqual(4, len(ones))
 
+    def test_inheritance_with_function_as_meta_model(self):
+        def make_test_object(**kwargs):
+            return TestObject(**kwargs)
+
+        class TestObjectFactory(base.Factory):
+            class Meta:
+                model = make_test_object
+
+            one = "foo"
+
+        class TestSubFactory(TestObjectFactory):
+            one = "bar"
+
+        sub = TestSubFactory.build()
+        self.assertEqual(sub.one, "bar")
+
 
 class FactorySequenceTestCase(unittest.TestCase):
     def setUp(self):
