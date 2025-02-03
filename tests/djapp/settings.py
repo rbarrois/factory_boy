@@ -23,7 +23,8 @@ DATABASES = {
 
 
 INSTALLED_APPS = [
-    'tests.djapp'
+    'django.contrib.contenttypes',
+    'tests.djapp',
 ]
 
 MIDDLEWARE_CLASSES = ()

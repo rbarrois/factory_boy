@@ -218,14 +218,18 @@ class BuildStep:
             parent_chain = ()
         return (self.stub,) + parent_chain
 
-    def recurse(self, factory, declarations, force_sequence=None):
+    def recurse(self, factory, declarations, force_sequence=None, collect_instances=None):
         from . import base
         if not issubclass(factory, base.BaseFactory):
             raise errors.AssociatedClassError(
                 "%r: Attempting to recursing into a non-factory object %r"
                 % (self, factory))
         builder = self.builder.recurse(factory._meta, declarations)
-        return builder.build(parent_step=self, force_sequence=force_sequence)
+        return builder.build(
+            parent_step=self,
+            force_sequence=force_sequence,
+            collect_instances=collect_instances,
+        )
 
     def __repr__(self):
         return f"<BuildStep for {self.builder!r}>"
@@ -246,7 +250,7 @@ class StepBuilder:
         self.extras = extras
         self.force_init_sequence = extras.pop('__sequence', None)
 
-    def build(self, parent_step=None, force_sequence=None):
+    def build(self, parent_step=None, force_sequence=None, collect_instances=None):
         """Build a factory instance."""
         # TODO: Handle "batch build" natively
         pre, post = parse_declarations(
@@ -277,19 +281,23 @@ class StepBuilder:
             kwargs=kwargs,
         )
 
-        postgen_results = {}
-        for declaration_name in post.sorted():
-            declaration = post[declaration_name]
-            postgen_results[declaration_name] = declaration.declaration.evaluate_post(
+        if collect_instances is None:
+            postgen_results = {}
+            for declaration_name in post.sorted():
+                declaration = post[declaration_name]
+                postgen_results[declaration_name] = declaration.declaration.evaluate_post(
+                    instance=instance,
+                    step=step,
+                    overrides=declaration.context,
+                )
+            self.factory_meta.use_postgeneration_results(
                 instance=instance,
                 step=step,
-                overrides=declaration.context,
+                results=postgen_results,
             )
-        self.factory_meta.use_postgeneration_results(
-            instance=instance,
-            step=step,
-            results=postgen_results,
-        )
+        else:
+            collect_instances.append(instance)
+
         return instance
 
     def recurse(self, factory_meta, extras):

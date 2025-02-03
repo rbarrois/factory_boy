@@ -78,6 +78,9 @@ class FakeModel:
             instance._defaults = None
             return instance
 
+        def bulk_create(self, objs, **kwargs):
+            return objs
+
         def values_list(self, *args, **kwargs):
             return self
 
@@ -86,6 +89,16 @@ class FakeModel:
 
         def using(self, db):
             return self
+
+    class _meta:
+        concrete_model = None
+
+        @staticmethod
+        def get_fields(*args, **kwargs):
+            return []
+
+    class _state:
+        adding = True
 
     objects = FakeModelManager()
 

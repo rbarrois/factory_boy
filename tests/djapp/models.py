@@ -5,6 +5,8 @@
 import os.path
 
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.db.models import signals
 
@@ -137,3 +139,46 @@ class FromAbstractWithCustomManager(AbstractWithCustomManager):
 
 class HasMultifieldModel(models.Model):
     multifield = models.ForeignKey(to=MultifieldModel, on_delete=models.CASCADE)
+
+
+class P(models.Model):
+    pass
+
+
+class R(models.Model):
+    is_default = models.BooleanField(default=False)
+    p = models.ForeignKey(P, models.CASCADE, null=True)
+
+
+class S(models.Model):
+    r = models.ForeignKey(R, models.CASCADE)
+
+
+class T(models.Model):
+    s = models.ForeignKey(S, models.CASCADE)
+
+
+class U(models.Model):
+    t = models.ForeignKey(T, models.CASCADE)
+
+
+class RChild(R):
+    text = models.CharField(max_length=10)
+
+
+class A(models.Model):
+    p_o = models.OneToOneField('P', models.CASCADE, related_name="+")
+    p_f = models.ForeignKey('P', models.CASCADE, related_name="+")
+    p_m = models.ManyToManyField('P')
+
+
+class AA(models.Model):
+    a = models.OneToOneField(A, models.CASCADE)
+    u = models.OneToOneField(U, models.CASCADE)
+    p = models.OneToOneField(P, models.CASCADE)
+
+
+class GenericModel(models.Model):
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    generic_obj = GenericForeignKey("content_type", "object_id")

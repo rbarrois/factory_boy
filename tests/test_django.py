@@ -2,9 +2,12 @@
 
 """Tests for factory_boy/Django interactions."""
 
+import inspect
 import io
 import os
+import tempfile
 import unittest
+from contextlib import ExitStack
 from unittest import mock
 
 try:
@@ -13,9 +16,11 @@ except ImportError:
     raise unittest.SkipTest("django tests disabled.")
 
 from django import test as django_test
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth.hashers import check_password
-from django.core.management import color
+from django.core.management import call_command, color
+from django.core.management.commands.migrate import Command as MigrateCommand
 from django.db import IntegrityError, connections
 from django.db.models import signals
 from django.test import utils as django_test_utils
@@ -37,17 +42,41 @@ django.setup()
 from .djapp import models  # noqa:E402 isort:skip
 
 test_state = {}
+cleanup = ExitStack()
 
 
 def setUpModule():
-    django_test_utils.setup_test_environment()
-    runner_state = django_test_utils.setup_databases(verbosity=0, interactive=False)
-    test_state['runner_state'] = runner_state
+    project_path = os.path.abspath(os.curdir)
+
+    for app_config in apps.get_app_configs():
+        module = app_config.module
+        app_path = os.path.dirname(os.path.abspath(inspect.getsourcefile(module)))
+
+        if app_path.startswith(project_path):
+            temp_dir = cleanup.enter_context(tempfile.TemporaryDirectory(prefix='migrations_', dir=app_path))
+            # Need to make this directory a proper python module otherwise django will refuse to recognize it
+            open(os.path.join(temp_dir, '__init__.py'), 'a').close()
+            settings.MIGRATION_MODULES[app_config.label] = '%s.%s' % (app_config.module.__name__,
+                                                                      os.path.basename(temp_dir))
+
+    def WrappedMigrateCommand(*args, **kwargs):
+        """
+        Because we're using django's `contenttypes` there is no way to get the migrations to work properly
+        """
+        for app in settings.MIGRATION_MODULES:
+            call_command('makemigrations', name=app, verbosity=0)
+        return MigrateCommand(*args, **kwargs)
+
+    with mock.patch('django.core.management.commands.migrate.Command', wraps=WrappedMigrateCommand):
+        django_test_utils.setup_test_environment()
+        runner_state = django_test_utils.setup_databases(verbosity=0, interactive=False)
+        test_state['runner_state'] = runner_state
 
 
 def tearDownModule():
     django_test_utils.teardown_databases(test_state['runner_state'], verbosity=0)
     django_test_utils.teardown_test_environment()
+    cleanup.close()
 
 
 class StandardFactory(factory.django.DjangoModelFactory):
@@ -148,6 +177,225 @@ class WithMultipleGetOrCreateFieldsFactory(factory.django.DjangoModelFactory):
 
     slug = factory.Sequence(lambda n: "slug%s" % n)
     text = factory.Sequence(lambda n: "text%s" % n)
+
+
+class PFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.P
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+
+class RFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.R
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    is_default = True
+    p = factory.SubFactory(PFactory)
+
+
+class RChildFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.RChild
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    text = 'test'
+    r_ptr = factory.SubFactory(RFactory)
+
+
+class SFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.S
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    r = factory.SubFactory(RFactory)
+
+
+class TFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.T
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    s = factory.SubFactory(SFactory)
+
+
+class UFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.U
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    t = factory.SubFactory(TFactory)
+
+
+class APFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.A.p_m.through
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    a = factory.SubFactory('tests.test_django.AFactory')
+    p = factory.SubFactory(PFactory)
+
+
+class AFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.A
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    p_o = factory.SubFactory(PFactory)
+    p_f = factory.SubFactory(PFactory)
+
+
+class AWithMFactory(AFactory):
+    p_m = factory.RelatedFactoryList(APFactory, factory_related_name='a')
+
+
+class AAFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.AA
+        use_bulk_create = True
+        skip_postgeneration_save = True
+
+    a = factory.SubFactory(AWithMFactory)
+    u = factory.SubFactory(UFactory)
+    p = factory.SubFactory(PFactory)
+
+
+def lazy_content_type(o):
+    from django.contrib.contenttypes.models import ContentType
+    return ContentType.objects.get_for_model(o.generic_obj)
+
+
+class GenericModelFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        # exclude = ['generic_obj']
+        abstract = True
+        skip_postgeneration_save = True
+
+    object_id = factory.SelfAttribute('generic_obj.id')
+    content_type = factory.LazyAttribute(lazy_content_type)
+
+
+class GenericPFactory(GenericModelFactory):
+    generic_obj = factory.SubFactory(PFactory)
+
+    class Meta:
+        use_bulk_create = True
+        model = models.GenericModel
+        skip_postgeneration_save = True
+
+
+class DependencyInsertOrderTest(django_test.TestCase):
+
+    def test_empty(self):
+        actual = factory.django.dependency_insert_order([])
+        self.assertEqual(actual, [])
+
+    def test_sub_create(self):
+        p1 = models.P()
+        p2 = models.P()
+        r1 = models.R(p=p1)
+        r2 = models.R(p=p2)
+        actual = factory.django.dependency_insert_order([r1, r2, p1, p2])
+        self.assertEqual(actual, [(models.P, [p1, p2]), (models.R, [r1, r2])])
+
+    def test_sub_all_ready_created(self):
+        p1 = PFactory()
+        p2 = models.P()
+        r1 = models.R(p=p1)
+        r2 = models.R(p=p2)
+        r3 = RFactory()
+        actual = factory.django.dependency_insert_order([p1, p2, r1, r2, r3])
+
+        # Note that `p1` is ignored completely since it was created already
+        # Note that `r3` along with `r3.p` is ignored completely since it was created already
+        self.assertEqual(actual, [(models.P, [p2]), (models.R, [r1, r2])])
+
+    def test_new_m2m(self):
+        step = factory.builder.StepBuilder(AWithMFactory._meta, {}, factory.enums.BUILD_STRATEGY)
+        created_instances = []
+        a1 = step.build(collect_instances=created_instances)
+        p1 = a1.p_o
+        p2 = a1.p_f
+        p_m1, p_m2 = [x for x in created_instances if isinstance(x, models.A.p_m.through)]
+        p3 = p_m1.p
+        p4 = p_m2.p
+        actual = factory.django.dependency_insert_order(created_instances)
+        self.assertEqual(actual, [(models.P, [p1, p2, p3, p4]),
+                                  (models.A, [a1]),
+                                  (models.A.p_m.through, [p_m1, p_m2])])
+
+
+class DjangoBulkInsertTest(django_test.TestCase):
+    SUPPORTS_BULK_INSERT = factory.django.connection_supports_bulk_insert(
+        factory.django.DEFAULT_DB_ALIAS
+    )
+
+    def test_single_object_create(self):
+        EXPECTED_QUERIES = 1 if self.SUPPORTS_BULK_INSERT else 1
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            PFactory()
+
+    def test_single_object_create_batch(self):
+        EXPECTED_QUERIES = 1 if self.SUPPORTS_BULK_INSERT else 10
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            PFactory.create_batch(10)
+
+    def test_one_level_nested_single_object_create(self):
+        EXPECTED_QUERIES = 2 if self.SUPPORTS_BULK_INSERT else 2
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RFactory()
+
+        existing_p = PFactory()
+        EXPECTED_QUERIES = 1 if self.SUPPORTS_BULK_INSERT else 1
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RFactory(p=existing_p)
+
+    def test_one_level_nested_single_object_create_batch(self):
+        EXPECTED_QUERIES = 2 if self.SUPPORTS_BULK_INSERT else 20
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RFactory.create_batch(10)
+
+        existing_p = PFactory()
+        EXPECTED_QUERIES = 1 if self.SUPPORTS_BULK_INSERT else 10
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RFactory.create_batch(10, p=existing_p)
+
+    def test_one_level_nested_m2m_create_batch(self):
+        EXPECTED_QUERIES = 3 if self.SUPPORTS_BULK_INSERT else 70
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            AWithMFactory.create_batch(10)
+
+        existing_p = PFactory()
+        EXPECTED_QUERIES = 3 if self.SUPPORTS_BULK_INSERT else 60
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            AWithMFactory.create_batch(10, p_f=existing_p)
+
+    def test_multi_level_nested_m2m_create_batch(self):
+        EXPECTED_QUERIES = 8 if self.SUPPORTS_BULK_INSERT else 140
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            AAFactory.create_batch(10)
+
+    def test_single_generic(self):
+        EXPECTED_QUERIES = 3 if self.SUPPORTS_BULK_INSERT else 3
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            GenericPFactory()
+
+    def test_multi_table_inherited_model(self):
+        EXPECTED_QUERIES = 3 if self.SUPPORTS_BULK_INSERT else 4
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RChildFactory()
+
+        EXPECTED_QUERIES = 3 if self.SUPPORTS_BULK_INSERT else 40
+        with self.assertNumQueries(EXPECTED_QUERIES):
+            RChildFactory.create_batch(10)
 
 
 class ModelTests(django_test.TestCase):
