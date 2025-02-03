@@ -1,9 +1,13 @@
 # Copyright: See the LICENSE file.
 
+from typing import TypeVar
+
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 
 from . import base, errors
+
+T = TypeVar("T")
 
 SESSION_PERSISTENCE_COMMIT = 'commit'
 SESSION_PERSISTENCE_FLUSH = 'flush'
@@ -43,7 +47,7 @@ class SQLAlchemyOptions(base.FactoryOptions):
         ]
 
 
-class SQLAlchemyModelFactory(base.Factory):
+class SQLAlchemyModelFactory(base.Factory[T]):
     """Factory for SQLAlchemy models. """
 
     _options_class = SQLAlchemyOptions

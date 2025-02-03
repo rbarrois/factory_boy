@@ -2,12 +2,14 @@
 
 
 """factory_boy extensions for use with the mongoengine library (pymongo wrapper)."""
-
+from typing import TypeVar
 
 from . import base
 
+T = TypeVar("T")
 
-class MongoEngineFactory(base.Factory):
+
+class MongoEngineFactory(base.Factory[T]):
     """Factory for mongoengine objects."""
 
     class Meta:

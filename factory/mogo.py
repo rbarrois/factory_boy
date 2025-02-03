@@ -2,12 +2,14 @@
 
 
 """factory_boy extensions for use with the mogo library (pymongo wrapper)."""
-
+from typing import TypeVar
 
 from . import base
 
+T = TypeVar("T")
 
-class MogoFactory(base.Factory):
+
+class MogoFactory(base.Factory[T]):
     """Factory for mogo objects."""
     class Meta:
         abstract = True
