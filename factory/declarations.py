@@ -389,31 +389,21 @@ class _FactoryWrapper:
     path for that subclass (e.g 'myapp.factories.MyFactory').
     """
     def __init__(self, factory_or_path):
-        self.factory = None
-        self.module = self.name = ''
-        if isinstance(factory_or_path, type):
-            self.factory = factory_or_path
-        else:
-            if not (isinstance(factory_or_path, str) and '.' in factory_or_path):
-                raise ValueError(
-                    "A factory= argument must receive either a class "
-                    "or the fully qualified path to a Factory subclass; got "
-                    "%r instead." % factory_or_path)
-            self.module, self.name = factory_or_path.rsplit('.', 1)
+
+        if not (isinstance(factory_or_path, type) or (isinstance(factory_or_path, str) and '.' in factory_or_path)):
+            raise ValueError(
+                "A factory= argument must receive either a class "
+                "or the fully qualified path to a Factory subclass; got "
+                "%r instead." % factory_or_path)
+        self.factory = factory_or_path
 
     def get(self):
-        if self.factory is None:
-            self.factory = utils.import_object(
-                self.module,
-                self.name,
-            )
+        if isinstance(self.factory, str):
+            self.factory = utils.resolve_type(self.factory)
         return self.factory
 
     def __repr__(self):
-        if self.factory is None:
-            return f'<_FactoryImport: {self.module}.{self.name}>'
-        else:
-            return f'<_FactoryImport: {self.factory.__class__}>'
+        return f'<_FactoryImport: {self.factory}>'
 
 
 class SubFactory(BaseDeclaration):

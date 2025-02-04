@@ -1,5 +1,6 @@
 # Copyright: See the LICENSE file.
 
+import mailbox
 import unittest
 
 from factory import base, declarations, enums, errors
@@ -214,6 +215,16 @@ class OptionsTests(unittest.TestCase):
 
         with self.assertRaises(TypeError):
             type("SecondFactory", (base.Factory,), {"Meta": Meta})
+
+    def test_meta_model_as_path(self):
+        class MailboxFactory(base.Factory):
+            class Meta:
+                model = "mailbox.Mailbox"
+            path = "/tmp/mail"
+
+        box = MailboxFactory()
+        assert isinstance(box, mailbox.Mailbox)
+        assert box._path == "/tmp/mail"
 
 
 class DeclarationParsingTests(unittest.TestCase):

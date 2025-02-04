@@ -196,7 +196,7 @@ class FactoryWrapperTestCase(unittest.TestCase):
 
     def test_lazyness(self):
         f = declarations._FactoryWrapper('factory.declarations.Sequence')
-        self.assertEqual(None, f.factory)
+        self.assertEqual('factory.declarations.Sequence', f.factory)
 
         factory_class = f.get()
         self.assertEqual(declarations.Sequence, factory_class)
@@ -205,7 +205,7 @@ class FactoryWrapperTestCase(unittest.TestCase):
         """Ensure that _FactoryWrapper tries to import only once."""
         orig_date = datetime.date
         w = declarations._FactoryWrapper('datetime.date')
-        self.assertEqual(None, w.factory)
+        self.assertEqual('datetime.date', w.factory)
 
         factory_class = w.get()
         self.assertEqual(orig_date, factory_class)

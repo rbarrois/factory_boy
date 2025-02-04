@@ -16,6 +16,14 @@ def import_object(module_name, attribute_name):
     return getattr(module, attribute_name)
 
 
+def resolve_type(type_or_path):
+    if isinstance(type_or_path, type):
+        return type_or_path
+    if not (isinstance(type_or_path, str) and '.' in type_or_path):
+        raise ValueError("Must receive either an object or the fully qualified path")
+    return import_object(*type_or_path.rsplit('.', 1))
+
+
 class log_pprint:
     """Helper for properly printing args / kwargs passed to an object.
 

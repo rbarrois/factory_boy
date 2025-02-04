@@ -1,6 +1,6 @@
 # Copyright: See the LICENSE file.
 
-
+import datetime
 import itertools
 import unittest
 
@@ -10,9 +10,7 @@ from factory import utils
 class ImportObjectTestCase(unittest.TestCase):
     def test_datetime(self):
         imported = utils.import_object('datetime', 'date')
-        import datetime
-        d = datetime.date
-        self.assertEqual(d, imported)
+        self.assertEqual(datetime.date, imported)
 
     def test_unknown_attribute(self):
         with self.assertRaises(AttributeError):
@@ -21,6 +19,23 @@ class ImportObjectTestCase(unittest.TestCase):
     def test_invalid_module(self):
         with self.assertRaises(ImportError):
             utils.import_object('this-is-an-invalid-module', '__name__')
+
+
+class ResolveTypeTestCase(unittest.TestCase):
+    def test_datetime(self):
+        imported = utils.resolve_type('datetime.date')
+        self.assertEqual(datetime.date, imported)
+
+    def test_unknown_attribute(self):
+        with self.assertRaises(AttributeError):
+            utils.resolve_type('datetime.foo')
+
+    def test_invalid_module(self):
+        with self.assertRaises(ImportError):
+            utils.resolve_type('this-is-an-invalid-module.__name__')
+
+    def test_is_a_class(self):
+        return utils.resolve_type(datetime.date) is datetime.date
 
 
 class LogPPrintTestCase(unittest.TestCase):

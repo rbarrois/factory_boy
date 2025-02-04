@@ -32,10 +32,14 @@ Meta options
     .. attribute:: model
 
         This optional attribute describes the class of objects to generate.
+        It could be a class or the fully qualified import path to it.
 
         If unset, it will be inherited from parent :class:`Factory` subclasses.
 
         .. versionadded:: 2.4.0
+
+        .. versionadded:: 3.3
+           Support fully qualified import path to the class
 
     .. method:: get_model_class()
 

@@ -376,7 +376,7 @@ class FactoryOptions:
         This can be overridden in framework-specific subclasses to hook into
         existing model repositories, for instance.
         """
-        return self.model
+        return utils.resolve_type(self.model) if isinstance(self.model, str) else self.model
 
     def __str__(self):
         return "<%s for %s>" % (self.__class__.__name__, self.factory.__name__)
