@@ -117,6 +117,7 @@ ChangeLog
 
     - Add support for Django 3.1
     - Add support for Python 3.9
+    - Add support for `unique` Faker feature
 
 *Removed:*
 

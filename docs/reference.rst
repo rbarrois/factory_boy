@@ -704,6 +704,24 @@ Faker
                 date_end=datetime.date(2020, 5, 31),
             )
 
+    Since Faker 4.9.0 version (see `Faker documentation <https://faker.readthedocs.io/en/master/fakerclass.html#unique-values>`_),
+    on every provider, you can specify whether to return an unique value or not:
+
+    .. code-block:: python
+
+        class UserFactory(fatory.Factory):
+            class Meta:
+                model = User
+
+            arrival = factory.Faker(
+                'date_between_dates',
+                date_start=datetime.date(2020, 1, 1),
+                date_end=datetime.date(2020, 5, 31),
+                unique=True  # The generated date is guaranteed to be unique inside the test execution.
+            )
+
+    Note that an `UniquenessException` will be thrown if Faker fails to generate an unique value.
+
     As with :class:`~factory.SubFactory`, the parameters can be any valid declaration.
     This does not apply to the provider name or the locale.
 
