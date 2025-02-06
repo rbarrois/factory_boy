@@ -11,10 +11,6 @@ import os
 import warnings
 from typing import Dict, TypeVar
 
-from django.contrib.auth.hashers import make_password
-from django.core import files as django_files
-from django.db import IntegrityError
-
 from . import base, declarations, errors
 
 logger = logging.getLogger('factory.generate')
@@ -124,6 +120,7 @@ class DjangoModelFactory(base.Factory[T]):
     @classmethod
     def _get_or_create(cls, model_class, *args, **kwargs):
         """Create an instance of the model through objects.get_or_create."""
+        from django.db import IntegrityError
         manager = cls._get_manager(model_class)
 
         assert 'defaults' not in cls._meta.django_get_or_create, (
@@ -193,7 +190,10 @@ class DjangoModelFactory(base.Factory[T]):
 
 
 class Password(declarations.Transformer):
-    def __init__(self, password, transform=make_password, **kwargs):
+    def __init__(self, password, transform=None, **kwargs):
+        if transform is None:
+            from django.contrib.auth.hashers import make_password
+            transform = make_password
         super().__init__(password, transform=transform, **kwargs)
 
 
@@ -207,6 +207,7 @@ class FileField(declarations.BaseDeclaration):
         return params.get('data', b'')
 
     def _make_content(self, params):
+        from django.core.files.base import ContentFile, File
         path = ''
 
         from_path = params.get('from_path')
@@ -222,21 +223,21 @@ class FileField(declarations.BaseDeclaration):
         if from_path:
             path = from_path
             with open(path, 'rb') as f:
-                content = django_files.base.ContentFile(f.read())
+                content = ContentFile(f.read())
 
         elif from_file:
             f = from_file
-            content = django_files.File(f)
+            content = File(f)
             path = content.name
 
         elif from_func:
             func = from_func
-            content = django_files.File(func())
+            content = File(func())
             path = content.name
 
         else:
             data = self._make_data(params)
-            content = django_files.base.ContentFile(data)
+            content = ContentFile(data)
 
         if path:
             default_filename = os.path.basename(path)
@@ -248,8 +249,9 @@ class FileField(declarations.BaseDeclaration):
 
     def evaluate(self, instance, step, extra):
         """Fill in the field."""
+        from django.core.files.base import File
         filename, content = self._make_content(extra)
-        return django_files.File(content.file, filename)
+        return File(content.file, filename)
 
 
 class ImageField(FileField):

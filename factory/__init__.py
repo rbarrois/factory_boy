@@ -2,6 +2,7 @@
 
 import importlib.metadata
 
+from . import alchemy, django, mogo, mongoengine
 from .base import (
     BaseDictFactory,
     BaseListFactory,
@@ -53,23 +54,6 @@ from .helpers import (
     stub,
     stub_batch,
 )
-
-try:
-    from . import alchemy
-except ImportError:
-    pass
-try:
-    from . import django
-except ImportError:
-    pass
-try:
-    from . import mogo
-except ImportError:
-    pass
-try:
-    from . import mongoengine
-except ImportError:
-    pass
 
 __author__ = 'Raphaël Barrois <raphael.barrois+fboy@polytechnique.org>'
 __version__ = importlib.metadata.version("factory_boy")

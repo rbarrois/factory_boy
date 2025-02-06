@@ -1,8 +1,5 @@
 # Copyright: See the LICENSE file.
 
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm.exc import NoResultFound
-
 from . import base, errors
 
 SESSION_PERSISTENCE_COMMIT = 'commit'
@@ -61,6 +58,9 @@ class SQLAlchemyModelFactory(base.Factory):
 
     @classmethod
     def _get_or_create(cls, model_class, session, args, kwargs):
+        from sqlalchemy.exc import IntegrityError
+        from sqlalchemy.orm.exc import NoResultFound
+
         key_fields = {}
         for field in cls._meta.sqlalchemy_get_or_create:
             if field not in kwargs:
