@@ -137,6 +137,24 @@ class FuzzyDecimal(BaseFuzzyAttribute):
         return base.quantize(decimal.Decimal(10) ** -self.precision)
 
 
+class FuzzyDecimalDec(BaseFuzzyAttribute):
+    """Random decimal within a given range, accepting decimal-like arguments."""
+    def __init__(self, low, high=None, precision=2):
+        if high is None:
+            high = low
+            low = decimal.Decimal('0')
+
+        self.low = decimal.Decimal(low)
+        self.high = decimal.Decimal(high)
+        self.precision = precision
+
+        super().__init__()
+
+    def fuzz(self):
+        base = random.uniform_decimal(self.low, self.high)
+        return base.quantize(decimal.Decimal(10) ** -self.precision)
+
+
 class FuzzyFloat(BaseFuzzyAttribute):
     """Random float within a given range."""
 
