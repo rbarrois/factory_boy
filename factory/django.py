@@ -176,6 +176,21 @@ class DjangoModelFactory(base.Factory[T]):
 
     # DEPRECATED. Remove this override with the next major release.
     @classmethod
+    def create_batch(cls, size, **kwargs):
+        """Create a batch of instances of the given class, with overriden attrs.
+
+        Args:
+            size (int): the number of instances to create
+
+        Returns:
+            object list: the created instances
+        """
+
+        model_class = cls._meta.get_model_class()
+        manager = cls._get_manager(model_class)
+        return manager.bulk_create(cls.build_batch(size, **kwargs))
+
+    @classmethod
     def _after_postgeneration(cls, instance, create, results=None):
         """Save again the instance if creating and at least one hook ran."""
         if create and results and not cls._meta.skip_postgeneration_save:
