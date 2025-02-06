@@ -2784,6 +2784,36 @@ class SelfReferentialTests(unittest.TestCase):
         self.assertIsNotNone(obj.parent.parent.parent)
         self.assertIsNone(obj.parent.parent.parent.parent)
 
+    def test_no_parent_related(self):
+        from .cyclic import self_ref
+
+        obj = self_ref.TreeElementRelatedFactory(parent__parent__parent=None)
+        self.assertIsNone(obj.parent.parent.parent)
+
+    def test_without_trait(self):
+        from .cyclic import self_ref
+
+        obj = self_ref.TreeElementTraitFactory()
+        self.assertIsNone(obj.parent)
+
+    def test_with_trait(self):
+        from .cyclic import self_ref
+
+        obj = self_ref.TreeElementTraitFactory(with_parent=True)
+        self.assertIsNotNone(obj.parent)
+
+    def test_without_related_trait(self):
+        from .cyclic import self_ref
+
+        obj = self_ref.TreeElementTraitRelatedFactory()
+        self.assertIsNone(obj.parent)
+
+    def test_with_related_trait(self):
+        from .cyclic import self_ref
+
+        obj = self_ref.TreeElementTraitRelatedFactory(with_parent=True)
+        self.assertIsNotNone(obj.parent)
+
 
 class DictTestCase(unittest.TestCase):
     def test_empty_dict(self):
