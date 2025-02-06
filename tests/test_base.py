@@ -445,6 +445,40 @@ class FactoryDefaultStrategyTestCase(unittest.TestCase):
         self.assertEqual(enums.CREATE_STRATEGY, TestModelFactory._meta.strategy)
 
 
+class DictFactoryTestCase(unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        pet_sequence_offset = 10
+
+        class Pet(base.DictFactory):
+            @classmethod
+            def _setup_next_sequence(cls) -> int:
+                return pet_sequence_offset
+
+            pet_id = declarations.Sequence(lambda n: n)
+
+        class Cat(Pet):
+            pass
+
+        class Dog(Pet):
+            pass
+
+        self.Pet = Pet
+        self.Cat = Cat
+        self.Dog = Dog
+        self.pet_sequence_offset = pet_sequence_offset
+
+    def test_override_setup_next_sequence(self):
+        result = self.Pet()
+        self.assertEqual(result['pet_id'], self.pet_sequence_offset)
+
+    def test_descendants_share_counter(self):
+        cat_result = self.Cat()
+        dog_result = self.Dog()
+        results = [cat_result['pet_id'], dog_result['pet_id']]
+        self.assertEqual(results, [self.pet_sequence_offset, self.pet_sequence_offset + 1])
+
+
 class FactoryCreationTestCase(unittest.TestCase):
     def test_factory_for(self):
         class TestFactory(base.Factory):

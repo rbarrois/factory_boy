@@ -681,8 +681,23 @@ class StubFactory(Factory):
         raise errors.UnsupportedStrategy()
 
 
+class DictFactoryOptions(FactoryOptions):
+
+    def _get_counter_reference(self):
+        """Identify which factory should be used for a shared counter."""
+
+        # When _setup_next_sequence is overridden in the factory, it should get a new counter
+        if '_setup_next_sequence' in self.factory.__dict__:
+            return self
+        else:
+            return super()._get_counter_reference()
+
+
 class BaseDictFactory(Factory):
     """Factory for dictionary-like classes."""
+
+    _options_class = DictFactoryOptions
+
     class Meta:
         abstract = True
 
