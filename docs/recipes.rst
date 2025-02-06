@@ -560,6 +560,51 @@ In order to get a dict, we'll just have to swap the model; the easiest way is to
     {'first_name': "Agent 000", 'username': 'john_doe'}
 
 
+Overriding the default locale
+-----------------------------
+
+Depending on the needed scope the solution differs slightly, but in any case
+you'll most likely need `~factory.Faker.override_default_locale`.
+
+For part of a test:
+
+.. code-block:: python
+
+    def test_something(self):
+        ...
+        with factory.Faker.override_default_locale('de_DE'):
+            ...
+        ...
+
+For the whole test:
+
+.. code-block:: python
+
+    @factory.Faker.override_default_locale('de_DE')
+    def test_something(self):
+        ...
+
+Globally (for all the project's tests):
+
+.. code-block:: python
+
+    # myproject/settings.py
+    TEST_RUNNER = 'myproject.testing.MyTestRunner'
+
+    # myproject/testing.py
+    import factory
+    from django.conf import settings
+    from django.util import translation
+    import django.test.runner
+
+    class MyTestRunner(django.test.runner.DiscoverRunner):
+        def run_tests(self, test_labels, extra_tests=None, **kwargs):
+            with factory.Faker.override_default_locale(
+                translation.to_locale(settings.LANGUAGE_CODE)
+            ):
+                return super().run_tests(test_labels, extra_tests=extra_tests, **kwargs)
+
+
 Fuzzying Django model field choices
 -----------------------------------
 
