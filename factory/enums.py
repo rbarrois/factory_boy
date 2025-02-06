@@ -5,6 +5,9 @@ BUILD_STRATEGY = 'build'
 CREATE_STRATEGY = 'create'
 STUB_STRATEGY = 'stub'
 
+# Auto field mapping strategy
+MAPPING_BY_TYPE = 'type'
+MAPPING_BY_NAME = 'name'  # Note that this mapping strategy check the type validity.
 
 #: String for splitting an attribute name into a
 #: (subfactory_name, subfactory_field) tuple.

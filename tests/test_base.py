@@ -2,7 +2,10 @@
 
 import unittest
 
+import factory
 from factory import base, declarations, enums, errors
+from factory.introspector.base import BaseIntrospector, FieldContext, DeclarationMapping
+from factory.introspector.utils import none_declaration
 
 
 class TestObject:
@@ -11,6 +14,50 @@ class TestObject:
         self.two = two
         self.three = three
         self.four = four
+
+
+class TestModelAttributes:
+
+    one: str = ""
+    two: str = ""
+    three: str = ""
+    four: str = ""
+
+    def __init__(self, one=None, two=None, three=None, four=None):
+        self.one = one
+        self.two = two
+        self.three = three
+        self.four = four
+
+
+class BasicMapping(DeclarationMapping):
+
+    FIELD_TYPE_MAPPING_AUTO_FIELDS = {str: factory.Faker("pystr")}
+    FIELD_NAME_MAPPING_AUTO_FIELDS = {}
+
+
+class TestModelAttributesIntrospector(BaseIntrospector):
+
+    DECLARATION_MAPPING_CLASS = BasicMapping
+
+    def get_default_field_names(self):
+        return ["one", "two", "three", "four"]
+
+    def get_field_by_name(self, field_name):
+        return getattr(self.model, field_name, None)
+
+
+class ChildOfTestModelAttributesIntrospector(TestModelAttributesIntrospector):
+    def get_default_field_names(self):
+        return ["five"]
+
+
+class ChildOfTestModelAttributes:
+    five: str = ""
+
+    def __init__(self, one=None, two=None, three=None, four=None, five=None):
+        super().__init__(one=one, two=two, three=three, four=four)
+        self.five = five
 
 
 class FakeDjangoModel:
@@ -538,3 +585,161 @@ class PostGenerationParsingTestCase(unittest.TestCase):
 
         self.assertIn('foo', TestObjectFactory._meta.post_declarations.as_dict())
         self.assertIn('foo__bar', TestObjectFactory._meta.post_declarations.as_dict())
+
+
+class FactoryAutoGenerationTestCase(unittest.TestCase):
+
+    def test_autogenerate_declarations_autofields(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = True
+
+        declarations = Factory._meta.base_declarations
+        for class_attr in ["one", "two", "three", "four"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_autofields_with_parents_factories(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = True
+
+        class ChildFactory(Factory):
+            class Meta:
+                model = ChildOfTestModelAttributes
+                introspector_class = ChildOfTestModelAttributesIntrospector
+                default_auto_fields = True
+
+        declarations = ChildFactory._meta.base_declarations
+        for class_attr in ["one", "two", "three", "four", "five"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_autofields_with_parents_factories_with_include(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                include_auto_fields = ('two', "three")
+
+        class ChildFactory(Factory):
+            class Meta:
+                model = ChildOfTestModelAttributes
+                introspector_class = ChildOfTestModelAttributesIntrospector
+                default_auto_fields = True
+
+        declarations = ChildFactory._meta.base_declarations
+        for class_attr in ["two", "three", "five"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_autofields_with_parents_factories_with_exclude(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = True
+                exclude_auto_fields = ('two', "three")
+
+        class ChildFactory(Factory):
+            class Meta:
+                model = ChildOfTestModelAttributes
+                introspector_class = ChildOfTestModelAttributesIntrospector
+                default_auto_fields = True
+
+        declarations = ChildFactory._meta.base_declarations
+        for class_attr in ["one", "four", "five"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_no_autofields(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = False
+
+        declarations = Factory._meta.base_declarations
+        self.assertEqual(len(declarations), 0)
+
+    def test_autogenerate_declarations_with_include_auto_fields(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = False
+                include_auto_fields = ('two', "three")
+
+        declarations = Factory._meta.base_declarations
+        self.assertEqual(len(declarations), 2)
+        for class_attr in ["two", "three"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_with_exclude_auto_fields(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = False
+                include_auto_fields = ('two', "three")
+                exclude_auto_fields = ('two', )
+
+        declarations = Factory._meta.base_declarations
+        self.assertEqual(len(declarations), 1)
+        for class_attr in ["three"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_default_auto_fields_with_exclude_auto_fields(self):
+        class Factory(base.Factory):
+            class Meta:
+                model = TestModelAttributes
+                introspector_class = TestModelAttributesIntrospector
+                default_auto_fields = True
+                exclude_auto_fields = ('two', )
+
+        declarations = Factory._meta.base_declarations
+        self.assertEqual(len(declarations), 3)
+        for class_attr in ["one", "three", "four"]:
+            self.assertEqual(declarations[class_attr].provider, "pystr")
+
+    def test_autogenerate_declarations_default_auto_fields_with_buggy_introspector(self):
+
+        class BasicMapping(DeclarationMapping):
+            FIELD_TYPE_MAPPING_AUTO_FIELDS = {
+                str: factory.Faker("pystr"),
+                type(None): lambda ctx: none_declaration()
+            }
+            FIELD_NAME_MAPPING_AUTO_FIELDS = {}
+
+        class BuggyIntrospector(BaseIntrospector):
+            DECLARATION_MAPPING_CLASS = BasicMapping
+
+            def get_default_field_names(self):
+                return ["one", "two"]
+
+            def get_field_by_name(self, field_name):
+                return getattr(self.model, field_name, None)
+
+            def build_declarations(self, for_fields, skip_fields):
+                field_name = "unknown"
+                declarations = {}
+                field = self.get_field_by_name(field_name)
+                field_ctxt = FieldContext(
+                    field=field,
+                    field_name=field_name,
+                    field_type=type(field),
+                    model=self.model,
+                    factory=self._factory_class,
+                    skips=[],
+                )
+                declaration = self.build_declaration(field_ctxt)
+                declarations[field_name] = declaration
+
+                return declarations
+
+        with self.assertRaises(ValueError):
+            class Factory(base.Factory):
+                class Meta:
+                    model = TestModelAttributes
+                    introspector_class = BuggyIntrospector
+                    default_auto_fields = True
