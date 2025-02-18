@@ -7,7 +7,7 @@
 from . import base
 
 
-class MongoEngineFactory(base.Factory):
+class MongoEngineFactory(base.Factory[base.T]):
     """Factory for mongoengine objects."""
 
     class Meta:

@@ -16,3 +16,7 @@ dist/
 htmlcov/
 MANIFEST
 tags
+
+# Virtualenv
+.venv/
+venv/

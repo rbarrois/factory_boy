@@ -43,7 +43,7 @@ class SQLAlchemyOptions(base.FactoryOptions):
         ]
 
 
-class SQLAlchemyModelFactory(base.Factory):
+class SQLAlchemyModelFactory(base.Factory[base.T]):
     """Factory for SQLAlchemy models. """
 
     _options_class = SQLAlchemyOptions

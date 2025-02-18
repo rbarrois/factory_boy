@@ -666,7 +666,7 @@ class StubObject:
             setattr(self, field, value)
 
 
-class StubFactory(Factory):
+class StubFactory(Factory[StubObject]):
 
     class Meta:
         strategy = enums.STUB_STRATEGY
@@ -681,7 +681,7 @@ class StubFactory(Factory):
         raise errors.UnsupportedStrategy()
 
 
-class BaseDictFactory(Factory):
+class BaseDictFactory(Factory[T]):
     """Factory for dictionary-like classes."""
     class Meta:
         abstract = True
@@ -698,12 +698,12 @@ class BaseDictFactory(Factory):
         return cls._build(model_class, *args, **kwargs)
 
 
-class DictFactory(BaseDictFactory):
+class DictFactory(BaseDictFactory[dict]):
     class Meta:
         model = dict
 
 
-class BaseListFactory(Factory):
+class BaseListFactory(Factory[T]):
     """Factory for list-like classes."""
     class Meta:
         abstract = True
@@ -724,7 +724,7 @@ class BaseListFactory(Factory):
         return cls._build(model_class, *args, **kwargs)
 
 
-class ListFactory(BaseListFactory):
+class ListFactory(BaseListFactory[list]):
     class Meta:
         model = list
 

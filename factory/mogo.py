@@ -7,7 +7,7 @@
 from . import base
 
 
-class MogoFactory(base.Factory):
+class MogoFactory(base.Factory[base.T]):
     """Factory for mogo objects."""
     class Meta:
         abstract = True
