@@ -150,6 +150,18 @@ class WithMultipleGetOrCreateFieldsFactory(factory.django.DjangoModelFactory):
     text = factory.Sequence(lambda n: "text%s" % n)
 
 
+class WithMultipleGetOrCreateWithTraitFieldsFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.MultifieldUniqueModel
+        django_get_or_create = ("slug", "text",)
+
+    slug = ''
+    text = factory.Sequence(lambda n: "text%s" % n)
+
+    class Params:
+        with_slug = factory.Trait(slug='bar')
+
+
 class ModelTests(django_test.TestCase):
     databases = {'default', 'replica'}
 
@@ -272,6 +284,11 @@ class MultipleGetOrCreateFieldsTest(django_test.TestCase):
         WithMultipleGetOrCreateFieldsFactory(title="Title")
         with self.assertRaises(django.db.IntegrityError):
             WithMultipleGetOrCreateFieldsFactory(title="Title")
+
+    def test_get_or_create_with_trait(self):
+        WithMultipleGetOrCreateWithTraitFieldsFactory(text='foo')
+        obj = WithMultipleGetOrCreateWithTraitFieldsFactory(text='foo', with_slug=True)
+        self.assertEqual(obj.slug, 'bar')
 
 
 class DjangoPkForceTestCase(django_test.TestCase):
