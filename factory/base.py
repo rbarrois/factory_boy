@@ -37,13 +37,15 @@ class FactoryMetaClass(type):
         Returns an instance of the associated class.
         """
 
-        if cls._meta.strategy == enums.BUILD_STRATEGY:
-            return cls.build(**kwargs)
-        elif cls._meta.strategy == enums.CREATE_STRATEGY:
-            return cls.create(**kwargs)
-        elif cls._meta.strategy == enums.STUB_STRATEGY:
-            return cls.stub(**kwargs)
-        else:
+        strategy_map = {
+            enums.BUILD_STRATEGY: cls.build,
+            enums.CREATE_STRATEGY: cls.create,
+            enums.STUB_STRATEGY: cls.stub,
+        }
+    
+        try:
+            return strategy_map[cls._meta.strategy](**kwargs)
+        except KeyError:
             raise errors.UnknownStrategy('Unknown Meta.strategy: {}'.format(
                 cls._meta.strategy))
 
